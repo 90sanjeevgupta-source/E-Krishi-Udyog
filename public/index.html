@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#15803d">
+<link rel="manifest" href="/manifest.json">
+<title>E-Krishi-Udyog · National Agricultural Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#15803d;--card:#ffffff;--text:#0f172a;--border:#e2e8f0;--bg:#f8fafc;}
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}
+body{margin:0;font-family:'Figtree',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;flex-direction:column;justify-content:center;align-items:center;padding:16px;}
+.box{max-width:540px;width:100%;text-align:center;}
+h1{font-family:'Bricolage Grotesque',sans-serif;font-size:30px;margin:0 0 6px;color:#15803d;}
+p{color:#64748b;margin:0 0 24px;font-size:15px;}
+.grid{display:grid;grid-template-columns:1fr;gap:14px;}
+a{text-decoration:none;color:inherit;background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:20px;text-align:left;display:flex;align-items:center;gap:16px;box-shadow:0 4px 12px rgba(0,0,0,0.03);transition:transform .12s,border-color .12s;}
+a:active{transform:scale(0.98);border-color:var(--primary);}
+.em{font-size:36px;width:60px;height:60px;display:grid;place-items:center;background:#f1f5f9;border-radius:14px;flex-shrink:0;}
+h3{margin:0 0 4px;font-family:'Bricolage Grotesque',sans-serif;font-size:18px;}
+small{color:#64748b;font-size:13px;line-height:1.4;display:block;}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🌾 E-Krishi-Udyog</h1>
+  <p>Bharat Ka Direct Farmer-to-Consumer Digital Network</p>
+  <div class="grid">
+    <a href="farmer.html">
+      <div class="em">🌾</div>
+      <div>
+        <h3>Farmer Portal (किसान)</h3>
+        <small>Voice-enabled crop listing, set your rates, and accept direct orders.</small>
+      </div>
+    </a>
+    <a href="consumer.html">
+      <div class="em">🛒</div>
+      <div>
+        <h3>Consumer Portal (ग्राहक)</h3>
+        <small>Buy farm-fresh produce with zero middlemen and live QR tracking.</small>
+      </div>
+    </a>
+    <a href="delivery.html">
+      <div class="em">🚚</div>
+      <div>
+        <h3>Delivery Desk (डिलीवरी)</h3>
+        <small>Scan customer order QR code with your phone camera and confirm delivery.</small>
+      </div>
+    </a>
+    <a href="manager.html">
+      <div class="em">🛡️</div>
+      <div>
+        <h3>Manager Dashboard (अधिकारी)</h3>
+        <small>Real-time analytics, order turnover, user controls, and live trade stream.</small>
+      </div>
+    </a>
+  </div>
+</div>
+</body>
+</html>

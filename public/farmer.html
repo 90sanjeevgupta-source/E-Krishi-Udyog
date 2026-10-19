@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#15803d">
+<link rel="manifest" href="/manifest.json">
+<title>🌾 E-Krishi · Kisan Mobile Desk</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#15803d;--a2:#84cc16;--primary-light:#dcfce7;--border:#e2e8f0;--bg:#f8fafc;--card:#ffffff;--text:#0f172a;--danger:#e11d48;}
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+body{margin:0;font-family:"Figtree",system-ui,sans-serif;background:var(--bg);color:var(--text);padding-bottom:76px;}
+header{background:linear-gradient(135deg,#15803d,#166534);color:#fff;padding:16px 20px;position:sticky;top:0;z-index:50;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 12px rgba(0,0,0,.1);}
+header h1{font-family:"Bricolage Grotesque",sans-serif;font-size:18px;margin:0;}
+main{max-width:540px;margin:0 auto;padding:16px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.grid{display:grid;grid-template-columns:1fr;gap:12px;}
+label{font-size:13px;font-weight:700;color:#334155;margin-bottom:4px;display:block;}
+input,select,textarea{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;background:#fff;}
+input:focus,select:focus{outline:none;border-color:var(--primary);}
+button{background:linear-gradient(135deg,var(--primary),var(--a2));color:#fff;border:0;padding:13px 20px;border-radius:14px;font-size:15px;font-weight:700;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+button.s{background:#fff;color:var(--primary);border:1.5px solid var(--primary);}
+button.d{background:var(--danger);color:#fff;}
+.mic-btn{background:#fef08a;color:#854d0e;border:1.5px solid #facc15;padding:8px 14px;border-radius:12px;font-size:13px;font-weight:700;margin-bottom:12px;width:auto;display:inline-flex;}
+.nav-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:8px 0;z-index:60;}
+.nav-item{background:none;border:none;color:#64748b;font-size:12px;font-weight:700;display:flex;flex-direction:column;align-items:center;padding:4px;width:auto;}
+.nav-item.on{color:var(--primary);}
+.tag{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:var(--primary-light);color:var(--primary);}
+.hide{display:none!important}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>🌾 Kisan Mobile Portal</h1>
+  <div style="font-size:12px;display:flex;align-items:center;gap:6px;">
+    <span id="who" style="font-weight:600;"></span>
+    <button class="s hide" id="out" onclick="logout()" style="width:auto;padding:4px 8px;font-size:11px;display:inline-block;">Exit</button>
+  </div>
+</header>
+
+<main>
+  <div id="auth" class="card">
+    <h3 style="margin-top:0;">📱 Farmer Sign In / Panjikaran</h3>
+    <p style="font-size:13px;color:#64748b;margin-bottom:16px;">Direct smartphone marketplace with buyers across India.</p>
+    <div class="grid">
+      <label>Full Name<input id="rn" placeholder="Apna pura naam likhein"></label>
+      <label>Mobile Number<input id="rp" type="tel" maxlength="10" placeholder="10-digit mobile number"></label>
+      <label>PIN / Password<input id="rw" type="password" placeholder="4-digit PIN"></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <label>State<input id="rs" placeholder="Rajya (State)"></label>
+        <label>District<input id="rd" placeholder="Zila (District)"></label>
+      </div>
+      <label>Village<input id="rv" placeholder="Gaon (Village)"></label>
+      <button onclick="reg()">Register Account</button>
+      <button class="s" onclick="login()">Log In with Phone & PIN</button>
+    </div>
+  </div>
+
+  <div id="app" class="hide">
+    <div id="t_add" class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;">Add Harvest Listing</h3>
+        <button class="mic-btn" type="button" onclick="startVoiceInput()">🎙️ Bol kar bharein</button>
+      </div>
+      <small id="voiceStatus" style="display:block;color:#15803d;font-weight:600;margin-bottom:8px;"></small>
+
+      <div class="grid" style="margin-top:8px;">
+        <label>Fasal / Crop Type
+          <select id="ct"><option>Wheat (Gehu)</option><option>Rice (Chawal)</option><option>Maize (Makka)</option><option>Mustard (Sarson)</option><option>Potato (Aloo)</option><option>Onion (Pyaz)</option><option>Tomato (Tamatar)</option><option>Vegetables</option><option>Pulses (Dal)</option></select>
+        </label>
+        <label>Variety / Kism<input id="cv" placeholder="e.g. Sharbati / Basmati"></label>
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:8px;">
+          <label>Quantity<input id="cq" type="number" placeholder="100"></label>
+          <label>Unit
+            <select id="cu"><option>quintal</option><option>kg</option><option>ton</option></select>
+          </label>
+        </div>
+        <label>Price per Unit (₹)<input id="cp" type="number" placeholder="Rate ₹"></label>
+        <label>Fertilizer
+          <select id="cf"><option>Organic (Jaivik)</option><option>Chemical</option><option>None (Natural)</option></select>
+        </label>
+        <button onclick="addCrop()">Publish Harvest</button>
+        <small id="msg" style="color:var(--primary);text-align:center;font-weight:700;"></small>
+      </div>
+    </div>
+
+    <div id="t_mine" class="card hide">
+      <h3 style="margin-top:0;">🌾 My Active Listings</h3>
+      <div id="cropList"></div>
+    </div>
+
+    <div id="t_ord" class="card hide">
+      <h3 style="margin-top:0;">📦 Buyer Orders</h3>
+      <div id="orderList"></div>
+    </div>
+  </div>
+</main>
+
+<div class="nav-bar hide" id="navBar">
+  <button class="nav-item on" onclick="switchTab('add')"><span style="font-size:18px;">➕</span>Add Crop</button>
+  <button class="nav-item" onclick="switchTab('mine')"><span style="font-size:18px;">🌾</span>My Crops</button>
+  <button class="nav-item" onclick="switchTab('ord')"><span style="font-size:18px;">📦</span>Orders <span id="ordBadge" style="color:red;"></span></button>
+</div>
+
+<script>
+const K={crops:"eku_crops",orders:"eku_orders",users:"eku_users",notes:"eku_notes",log:"eku_log",cfg:"eku_cfg"};
+let DB={};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"\x27]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","\x27":"&#39;"}[c]));
+const uid=p=>p+"-"+Math.random().toString(36).slice(2,8).toUpperCase();
+const stamp=()=>({iso:new Date().toISOString(),txt:new Date().toLocaleString("en-IN")});
+
+async function syncDown(){
+  try{
+    const r=await fetch('/api/data');
+    if(r.ok){DB=await r.json();return true;}
+  }catch(e){}
+  return false;
+}
+const get=(k,d=[])=>DB[k]||d;
+async function set(k,v){
+  DB[k]=v;
+  try{await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k,value:v})});}catch(e){}
+}
+
+let me=null;
+function init(){me=get(K.users).find(u=>u.id==localStorage.getItem("eku_f")&&u.role=="farmer")||null;}
+
+function startVoiceInput(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR) return alert("Please open in Google Chrome on Android or Safari on iOS for voice input.");
+  const r = new SR();
+  r.lang = 'hi-IN';
+  $("#voiceStatus").textContent = "🎙️ Sun rahe hain... Bolna shuru karein (e.g. Sharbati Gehu)";
+  r.onresult = e => {
+    const speech = e.results[0][0].transcript;
+    $("#cv").value = speech;
+    $("#voiceStatus").textContent = `Pehchana gaya: "${speech}"`;
+  };
+  r.onerror = () => $("#voiceStatus").textContent = "Awaz pehchani nahi gayi. Dobara koshish karein.";
+  r.start();
+}
+
+async function reg(){
+  await syncDown();
+  const u={id:uid("FRM"),role:"farmer",name:$("#rn").value.trim(),phone:$("#rp").value.trim(),pass:$("#rw").value,state:$("#rs").value.trim(),district:$("#rd").value.trim(),village:$("#rv").value.trim(),created:stamp()};
+  if(!u.name||!/^\d{10}$/.test(u.phone)||!u.pass) return alert("Pura naam, 10-digit mobile aur PIN bharein.");
+  const all=get(K.users);
+  if(all.some(x=>x.phone==u.phone)) return alert("Yeh mobile number pehle se registered hai.");
+  all.push(u);
+  await set(K.users,all);
+  localStorage.setItem("eku_f",u.id);
+  boot();
+}
+
+async function login(){
+  await syncDown();
+  const p=$("#rp").value.trim(),w=$("#rw").value;
+  const u=get(K.users).find(x=>x.role=="farmer"&&x.phone==p&&x.pass==w);
+  if(!u) return alert("Galat Mobile number ya PIN.");
+  localStorage.setItem("eku_f",u.id);
+  boot();
+}
+
+function logout(){localStorage.removeItem("eku_f");location.reload();}
+function boot(){init();$("#auth").classList.toggle("hide",!!me);$("#app").classList.toggle("hide",!me);$("#navBar").classList.toggle("hide",!me);$("#out").classList.toggle("hide",!me);$("#who").textContent=me?me.name:"";render();}
+
+async function addCrop(){
+  await syncDown();
+  const q=+$("#cq").value, p=+$("#cp").value;
+  if(!q||!p) return alert("Quantity aur price bharna zaroori hai.");
+  const crop={id:uid("CRP"),farmerId:me.id,farmerName:me.name,farmerPhone:me.phone,type:$("#ct").value,variety:$("#cv").value,qty:q,unit:$("#cu").value,price:p,fert:$("#cf").value,village:me.village,district:me.district,state:me.state,status:"Active",created:stamp()};
+  const all=get(K.crops);all.unshift(crop);
+  await set(K.crops,all);
+  $("#msg").textContent="✅ Fasal Market mein darj ho gayi!";
+  $("#cq").value="";$("#cp").value="";$("#cv").value="";
+  render();
+}
+
+async function decide(id,ok){
+  await syncDown();
+  const a=get(K.orders),o=a.find(x=>x.id==id);
+  o.status=ok?"Confirmed":"Rejected";
+  if(ok) o.token=uid("TK");
+  await set(K.orders,a);
+  render();
+}
+
+function render(){
+  if(!me) return;
+  const crops=get(K.crops).filter(x=>x.farmerId==me.id);
+  $("#cropList").innerHTML=crops.map(c=>`<div style="border-bottom:1px solid #eee;padding:10px 0;"><b>${esc(c.type)}</b> (${esc(c.variety)})<br>${c.qty} ${c.unit} · <b>₹${c.price}/${c.unit}</b> · <span class="tag">${c.status}</span></div>`).join("")||"Koi fasal list nahi hai.";
+  
+  const ords=get(K.orders).filter(x=>x.farmerId==me.id);
+  const pending=ords.filter(o=>o.status=="Pending").length;
+  $("#ordBadge").textContent=pending?`(${pending})`:"";
+  
+  $("#orderList").innerHTML=ords.map(o=>`<div style="border-bottom:1px solid #e2e8f0;padding:12px 0;">
+    <b>Order ID: ${o.id}</b> · <span class="tag">${o.status}</span><br>
+    ${o.cropName} (${o.qty} ${o.unit}) = <b>₹${o.total}</b><br>
+    Buyer: ${esc(o.consumerName)} (<a href="tel:${esc(o.consumerPhone)}">${esc(o.consumerPhone)}</a>)<br>
+    ${o.status=="Pending"?`<div style="display:flex;gap:8px;margin-top:8px;"><button onclick="decide('${o.id}',1)">Confirm Order</button><button class="d" onclick="decide('${o.id}',0)">Reject</button></div>`:""}
+  </div>`).join("")||"Abhi koi order nahi hai.";
+}
+
+function switchTab(t){
+  ["add","mine","ord"].forEach(k=>$("#t_"+k).classList.toggle("hide",k!=t));
+  document.querySelectorAll(".nav-item").forEach((b,i)=>b.classList.toggle("on",["add","mine","ord"][i]==t));
+}
+
+async function start(){
+  await syncDown();
+  init();
+  if(me) boot();
+  setInterval(async()=>{ await syncDown(); render(); }, 2500);
+}
+start();
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#4f46e5">
+<link rel="manifest" href="/manifest.json">
+<title>🛡️ E-Krishi · Manager Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#4f46e5;--border:#e2e8f0;--bg:#f8fafc;--card:#ffffff;--text:#0f172a;}
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+body{margin:0;font-family:"Figtree",system-ui,sans-serif;background:var(--bg);color:var(--text);padding-bottom:50px;}
+header{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:16px 20px;position:sticky;top:0;z-index:50;display:flex;justify-content:space-between;align-items:center;}
+header h1{font-family:"Bricolage Grotesque",sans-serif;font-size:18px;margin:0;}
+main{max-width:640px;margin:0 auto;padding:16px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.stat-card{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;padding:16px;border-radius:16px;}
+.stat-card .n{font-size:26px;font-weight:800;font-family:"Bricolage Grotesque",sans-serif;}
+input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;}
+button{background:linear-gradient(135deg,var(--primary),#6366f1);color:#fff;border:0;padding:13px 20px;border-radius:14px;font-size:15px;font-weight:700;width:100%;cursor:pointer;}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛡️ Manager Mobile Console</h1>
+  <div style="font-size:12px;" id="clk"></div>
+</header>
+
+<main>
+  <div id="gate" class="card">
+    <h3 style="margin-top:0;">Authorised Officer Access</h3>
+    <p style="font-size:13px;color:#64748b;">Enter administrative passcode to monitor state-wide operations.</p>
+    <input id="pw" type="password" placeholder="Passcode (Default: admin123)" style="margin-bottom:12px;">
+    <button onclick="unlock()">Unlock Dashboard</button>
+  </div>
+
+  <div id="dash" class="hide">
+    <div class="stat-grid" id="stats"></div>
+
+    <div class="card">
+      <h3 style="margin-top:0;">Add Delivery Agent</h3>
+      <input id="an" placeholder="Agent Full Name" style="margin-bottom:8px;">
+      <input id="ap" type="tel" maxlength="10" placeholder="10-digit Mobile" style="margin-bottom:8px;">
+      <input id="aw" type="password" placeholder="Rider Password" style="margin-bottom:12px;">
+      <button onclick="addAgent()">Create Delivery Account</button>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;">Live Global Transactions</h3>
+      <div id="recentOrders"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const K={crops:"eku_crops",orders:"eku_orders",users:"eku_users",agents:"eku_agents"};
+let DB={};
+const $=s=>document.querySelector(s);
+async function syncDown(){try{const r=await fetch('/api/data');if(r.ok){DB=await r.json();return true;}}catch(e){}return false;}
+const get=(k,d=[])=>DB[k]||d;
+async function set(k,v){DB[k]=v;try{await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k,value:v})});}catch(e){}}
+async function sha(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+
+async function unlock(){
+  if($("#pw").value==="admin123" || $("#pw").value==="manager"){
+    $("#gate").classList.add("hide");$("#dash").classList.remove("hide");
+    render();
+  } else {
+    alert("Invalid passcode.");
+  }
+}
+
+async function addAgent(){
+  await syncDown();
+  const n=$("#an").value.trim(),p=$("#ap").value.trim(),w=$("#aw").value;
+  if(!n||!/^\d{10}$/.test(p)||!w) return alert("Fill all agent fields.");
+  const A=get(K.agents);
+  A.push({id:"AGT-"+Math.random().toString(36).slice(2,7).toUpperCase(),name:n,phone:p,hash:await sha(w)});
+  await set(K.agents,A);
+  alert("Delivery Partner "+n+" Registered!");
+  $("#an").value="";$("#ap").value="";$("#aw").value="";
+}
+
+function render(){
+  const U=get(K.users),C=get(K.crops),O=get(K.orders);
+  const rev=O.reduce((a,o)=>a+o.total,0);
+  $("#stats").innerHTML=`
+    <div class="stat-card"><small>Registered Farmers</small><div class="n">${U.filter(u=>u.role=="farmer").length}</div></div>
+    <div class="stat-card"><small>Registered Citizens</small><div class="n">${U.filter(u=>u.role=="consumer").length}</div></div>
+    <div class="stat-card"><small>Active Crops</small><div class="n">${C.length}</div></div>
+    <div class="stat-card"><small>Total Value (₹)</small><div class="n">₹${rev.toLocaleString("en-IN")}</div></div>
+  `;
+
+  $("#recentOrders").innerHTML=O.slice(0,10).map(o=>`<div style="border-bottom:1px solid #eee;padding:10px 0;">
+    <b>${o.id}</b> · ₹${o.total} · <span style="font-weight:700;color:var(--primary);">${o.status}</span><br>
+    ${o.cropName} (${o.qty} ${o.unit})<br>
+    <small>Farmer: ${o.farmerName} ➔ Consumer: ${o.consumerName}</small>
+  </div>`).join("")||"No orders placed yet.";
+}
+
+setInterval(async()=>{ await syncDown(); if(!$("#dash").classList.contains("hide")) render(); }, 2500);
+syncDown();
+</script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#e11d48">
+<link rel="manifest" href="/manifest.json">
+<title>🛒 E-Krishi · Consumer Market</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#e11d48;--primary-light:#ffe4e6;--border:#e2e8f0;--bg:#f8fafc;--card:#ffffff;--text:#0f172a;--success:#16a34a;}
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+body{margin:0;font-family:"Figtree",system-ui,sans-serif;background:var(--bg);color:var(--text);padding-bottom:76px;}
+header{background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;padding:16px 20px;position:sticky;top:0;z-index:50;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 12px rgba(0,0,0,.1);}
+header h1{font-family:"Bricolage Grotesque",sans-serif;font-size:18px;margin:0;}
+main{max-width:540px;margin:0 auto;padding:16px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.grid{display:grid;grid-template-columns:1fr;gap:12px;}
+label{font-size:13px;font-weight:700;color:#334155;margin-bottom:4px;display:block;}
+input,select{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;background:#fff;}
+button{background:linear-gradient(135deg,#e11d48,#f43f5e);color:#fff;border:0;padding:13px 20px;border-radius:14px;font-size:15px;font-weight:700;width:100%;cursor:pointer;}
+button.s{background:#fff;color:var(--primary);border:1.5px solid var(--primary);}
+.nav-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:8px 0;z-index:60;}
+.nav-item{background:none;border:none;color:#64748b;font-size:12px;font-weight:700;display:flex;flex-direction:column;align-items:center;padding:4px;width:auto;}
+.nav-item.on{color:var(--primary);}
+.tag{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:var(--primary-light);color:var(--primary);}
+.hide{display:none!important}
+#dlg{position:fixed;inset:auto 0 0 0;background:#fff;border-radius:24px 24px 0 0;padding:24px;box-shadow:0 -10px 40px rgba(0,0,0,.25);z-index:90;max-height:85vh;overflow-y:auto;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>🛒 Consumer Mobile</h1>
+  <div style="font-size:12px;display:flex;align-items:center;gap:6px;">
+    <span id="who" style="font-weight:600;"></span>
+    <button class="s hide" id="out" onclick="logout()" style="width:auto;padding:4px 8px;font-size:11px;display:inline-block;">Exit</button>
+  </div>
+</header>
+
+<main>
+  <div id="auth" class="card">
+    <h3 style="margin-top:0;">Citizen Registration & Login</h3>
+    <p style="font-size:13px;color:#64748b;margin-bottom:16px;">Buy produce directly from verified farmers across all states.</p>
+    <div class="grid">
+      <label>Full Name<input id="rn" placeholder="Your full name"></label>
+      <label>Mobile Number<input id="rp" type="tel" maxlength="10" placeholder="10-digit mobile number"></label>
+      <label>Password<input id="rw" type="password" placeholder="Password"></label>
+      <label>Delivery Address<input id="ra" placeholder="Complete street address & landmark"></label>
+      <button onclick="reg()">Register Account</button>
+      <button class="s" onclick="login()">Log In</button>
+    </div>
+  </div>
+
+  <div id="app" class="hide">
+    <div id="t_shop">
+      <div class="card" style="padding:14px;">
+        <label>Search Crop<input id="sq" placeholder="Filter by crop name or variety..." oninput="render()"></label>
+      </div>
+      <div id="cropList"></div>
+    </div>
+
+    <div id="t_ord" class="hide">
+      <div id="orderList"></div>
+    </div>
+  </div>
+</main>
+
+<div class="nav-bar hide" id="navBar">
+  <button class="nav-item on" onclick="switchTab('shop')"><span style="font-size:18px;">🛒</span>Buy Crops</button>
+  <button class="nav-item" onclick="switchTab('ord')"><span style="font-size:18px;">📦</span>My Orders</button>
+</div>
+
+<div id="dlg" class="hide"></div>
+
+<script>
+const K={crops:"eku_crops",orders:"eku_orders",users:"eku_users",log:"eku_log",cfg:"eku_cfg"};
+let DB={},me=null,cur=null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"\x27]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","\x27":"&#39;"}[c]));
+const uid=p=>p+"-"+Math.random().toString(36).slice(2,8).toUpperCase();
+const stamp=()=>({iso:new Date().toISOString(),txt:new Date().toLocaleString("en-IN")});
+
+async function syncDown(){
+  try{
+    const r=await fetch('/api/data');
+    if(r.ok){DB=await r.json();return true;}
+  }catch(e){}
+  return false;
+}
+const get=(k,d=[])=>DB[k]||d;
+async function set(k,v){
+  DB[k]=v;
+  try{await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k,value:v})});}catch(e){}
+}
+
+function init(){me=get(K.users).find(u=>u.id==localStorage.getItem("eku_c")&&u.role=="consumer")||null;}
+
+async function reg(){
+  await syncDown();
+  const u={id:uid("CUS"),role:"consumer",name:$("#rn").value.trim(),phone:$("#rp").value.trim(),pass:$("#rw").value,address:$("#ra").value.trim(),created:stamp()};
+  if(!u.name||!/^\d{10}$/.test(u.phone)||!u.address) return alert("Please fill all fields.");
+  const all=get(K.users);
+  if(all.some(x=>x.phone==u.phone)) return alert("Mobile number already registered.");
+  all.push(u);
+  await set(K.users,all);
+  localStorage.setItem("eku_c",u.id);
+  boot();
+}
+
+async function login(){
+  await syncDown();
+  const p=$("#rp").value.trim(),w=$("#rw").value;
+  const u=get(K.users).find(x=>x.role=="consumer"&&x.phone==p&&x.pass==w);
+  if(!u) return alert("Invalid phone or password.");
+  localStorage.setItem("eku_c",u.id);
+  boot();
+}
+
+function logout(){localStorage.removeItem("eku_c");location.reload();}
+function boot(){init();$("#auth").classList.toggle("hide",!!me);$("#app").classList.toggle("hide",!me);$("#navBar").classList.toggle("hide",!me);$("#out").classList.toggle("hide",!me);$("#who").textContent=me?me.name:"";render();}
+
+function openBuy(id){
+  const c=get(K.crops).find(x=>x.id==id);if(!c)return;cur=c;
+  const d=$("#dlg");
+  d.innerHTML=`<h3 style="margin:0 0 8px;">Order: ${esc(c.type)}</h3>
+  <small>${c.qty} ${c.unit} available @ ₹${c.price}/${c.unit} from <b>${esc(c.farmerName)}</b></small>
+  <div style="margin:14px 0;"><label>Quantity (${c.unit})</label><input id="oq" type="number" min="1" max="${c.qty}" value="1" oninput="$('#tot').textContent='Total: ₹'+(this.value*${c.price}).toLocaleString('en-IN')"><p id="tot" style="font-weight:800;font-size:17px;color:var(--primary);margin:6px 0;">Total: ₹${c.price}</p></div>
+  <label>Delivery Address<input id="oa" value="${esc(me.address)}"></label>
+  <div style="display:flex;gap:8px;margin-top:16px;"><button onclick="place()">Confirm & Place Order</button><button class="s" onclick="$('#dlg').classList.add('hide')">Cancel</button></div>`;
+  d.classList.remove("hide");
+}
+
+async function place(){
+  await syncDown();
+  const q=+$("#oq").value,addr=$("#oa").value.trim();
+  if(!q||!addr) return alert("Please fill quantity and address.");
+  const all=get(K.crops),cr=all.find(x=>x.id==cur.id);
+  if(!cr||q>cr.qty) return alert("Requested quantity not available.");
+  const o={id:uid("REG"),cropId:cr.id,cropName:cr.type+" "+(cr.variety||""),farmerId:cr.farmerId,farmerName:cr.farmerName,farmerPhone:cr.farmerPhone,consumerId:me.id,consumerName:me.name,consumerPhone:me.phone,address:addr,qty:q,unit:cr.unit,price:cr.price,total:q*cr.price,status:"Pending",token:"",created:stamp()};
+  cr.qty-=q;if(cr.qty<=0)cr.status="Sold out";
+  await set(K.crops,all);
+  const os=get(K.orders);os.unshift(o);
+  await set(K.orders,os);
+  $("#dlg").classList.add("hide");
+  alert("Order Placed! Registration ID: "+o.id);
+  switchTab('ord');
+  render();
+}
+
+function qrText(o){
+  return JSON.stringify({app:"E-Krishi-Udyog",order:o.id,token:o.token,crop:o.cropName,qty:o.qty+" "+o.unit,farmer:o.farmerName,fphone:o.farmerPhone,consumer:o.consumerName,cphone:o.consumerPhone,address:o.address,total:o.total});
+}
+
+function render(){
+  if(!me) return;
+  const q=$("#sq")?$("#sq").value.toLowerCase():"";
+  const crops=get(K.crops).filter(x=>x.status=="Active"&&x.qty>0).filter(x=>!q||(x.type+x.variety).toLowerCase().includes(q));
+  $("#cropList").innerHTML=crops.map(c=>`<div class="card" style="margin-bottom:12px;">
+    <b>${esc(c.type)}</b> (${esc(c.variety||"-")})<br>
+    <div style="font-size:22px;font-weight:800;color:var(--primary);margin:4px 0;">₹${c.price} <small style="font-size:13px;color:#64748b;">/ ${c.unit}</small></div>
+    <small>Stock: ${c.qty} ${c.unit} · 📍 ${esc(c.village)}, ${esc(c.district)}<br>Farmer: <b>${esc(c.farmerName)}</b></small>
+    <button style="margin-top:10px;" onclick="openBuy('${c.id}')">Buy Harvest</button>
+  </div>`).join("")||"<div class=card>No crops listed matching search.</div>";
+
+  const ords=get(K.orders).filter(o=>o.consumerId==me.id);
+  $("#orderList").innerHTML=ords.map(o=>`<div class="card" style="margin-bottom:12px;">
+    <b>Order ID: ${o.id}</b> · <span class="tag">${o.status}</span><br>
+    ${esc(o.cropName)} (${o.qty} ${o.unit}) = <b>₹${o.total}</b><br>
+    <small>Farmer: ${esc(o.farmerName)} (${esc(o.farmerPhone)})</small><br>
+    ${(o.status=="Confirmed"||o.status=="Delivered")&&o.token?`<div style="text-align:center;margin-top:12px;"><div id="q${o.id}" style="display:inline-block;padding:8px;background:#fff;border-radius:12px;border:1px solid #eee;"></div><small style="display:block;margin-top:4px;">Token: <b>${o.token}</b> (Show to delivery rider)</small></div>`:""}
+  </div>`).join("")||"<div class=card>No orders placed yet.</div>";
+
+  ords.filter(o=>o.token&&$("#q"+o.id)).forEach(o=>{
+    $("#q"+o.id).innerHTML="";
+    new QRCode($("#q"+o.id),{text:qrText(o),width:130,height:130});
+  });
+}
+
+function switchTab(t){
+  ["shop","ord"].forEach(k=>$("#t_"+k).classList.toggle("hide",k!=t));
+  document.querySelectorAll(".nav-item").forEach((b,i)=>b.classList.toggle("on",["shop","ord"][i]==t));
+}
+
+async function start(){
+  await syncDown();
+  init();
+  if(me) boot();
+  setInterval(async()=>{ await syncDown(); render(); }, 2500);
+}
+start();
+</script>
+</body>
+</html>

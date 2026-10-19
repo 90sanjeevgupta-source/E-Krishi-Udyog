@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0e7490">
+<link rel="manifest" href="/manifest.json">
+<title>🚚 Delivery Desk</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#0e7490;--a2:#14b8a6;--border:#e2e8f0;--bg:#f8fafc;--card:#ffffff;--text:#0f172a;}
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+body{margin:0;font-family:"Figtree",system-ui,sans-serif;background:var(--bg);color:var(--text);padding-bottom:76px;}
+header{background:linear-gradient(135deg,#0e7490,#0d9488);color:#fff;padding:16px 20px;position:sticky;top:0;z-index:50;display:flex;justify-content:space-between;align-items:center;}
+header h1{font-family:"Bricolage Grotesque",sans-serif;font-size:18px;margin:0;}
+main{max-width:540px;margin:0 auto;padding:16px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;}
+button{background:linear-gradient(135deg,var(--primary),var(--a2));color:#fff;border:0;padding:13px 20px;border-radius:14px;font-size:15px;font-weight:700;width:100%;cursor:pointer;}
+button.s{background:#fff;color:var(--primary);border:1.5px solid var(--primary);}
+.hide{display:none!important}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>🚚 Delivery Partner Desk</h1>
+  <div style="font-size:12px;"><span id="who"></span></div>
+</header>
+
+<main>
+  <div id="auth" class="card">
+    <h3 style="margin-top:0;">Rider Login</h3>
+    <input id="lp" maxlength="10" type="tel" placeholder="10-digit mobile number" style="margin-bottom:10px;">
+    <input id="lw" type="password" placeholder="Password" style="margin-bottom:14px;">
+    <button onclick="login()">Log In</button>
+  </div>
+
+  <div id="app" class="hide">
+    <div class="card">
+      <h3 style="margin-top:0;">📷 Scan Consumer QR</h3>
+      <p style="font-size:13px;color:#64748b;">Scan consumer screen QR code or enter Order ID & Token manually.</p>
+      <input id="vi" placeholder="REG-XXXXXX" style="margin-bottom:8px;">
+      <input id="vt" placeholder="TK-XXXXXX" style="margin-bottom:12px;">
+      <div style="display:flex;gap:8px;">
+        <button onclick="verify()">Verify</button>
+        <button class="s" onclick="scan()">Open Camera</button>
+      </div>
+      <video id="vid" playsinline muted class="hide" style="width:100%;border-radius:14px;margin-top:14px;"></video>
+      <div id="vr" style="margin-top:14px;"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const K={orders:"eku_orders",agents:"eku_agents",log:"eku_log"};
+let DB={},me=null;
+const $=s=>document.querySelector(s);
+async function syncDown(){try{const r=await fetch('/api/data');if(r.ok){DB=await r.json();return true;}}catch(e){}return false;}
+const get=(k,d=[])=>DB[k]||d;
+async function set(k,v){DB[k]=v;try{await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k,value:v})});}catch(e){}}
+async function sha(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+
+async function login(){
+  await syncDown();
+  const p=$("#lp").value.trim(),h=await sha($("#lw").value);
+  const a=get(K.agents).find(x=>x.phone==p&&x.hash==h);
+  if(!a) return alert("Wrong credentials. Contact manager to create a delivery account.");
+  me=a;$("#auth").classList.add("hide");$("#app").classList.remove("hide");$("#who").textContent=me.name;
+}
+
+let stream=null;
+async function scan(){
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})}catch(e){return alert("Camera permission required.")}
+  const v=$("#vid");v.srcObject=stream;v.classList.remove("hide");await v.play();
+  const cv=document.createElement("canvas"),x=cv.getContext("2d",{willReadFrequently:true});
+  const tick=()=>{
+    if(!stream)return;
+    if(v.readyState==4){
+      cv.width=v.videoWidth;cv.height=v.videoHeight;x.drawImage(v,0,0);
+      const d=x.getImageData(0,0,cv.width,cv.height);
+      const r=window.jsQR&&jsQR(d.data,d.width,d.height);
+      if(r&&r.data){
+        try{const j=JSON.parse(r.data);$("#vi").value=j.order;$("#vt").value=j.token;}catch(e){$("#vi").value=r.data;}
+        stream.getTracks().forEach(t=>t.stop());stream=null;v.classList.add("hide");
+        verify();return;
+      }
+    }
+    requestAnimationFrame(tick);
+  };tick();
+}
+
+function verify(){
+  const id=$("#vi").value.trim(),t=$("#vt").value.trim();
+  const o=get(K.orders).find(x=>x.id==id);
+  const r=$("#vr");
+  if(!o||o.token!=t){r.innerHTML="<b style='color:red;'>✖ Invalid QR Token! Do not handover goods.</b>";return;}
+  r.innerHTML=`<div style="background:#dcfce7;color:#166534;padding:12px;border-radius:12px;">
+    <b>✔ Valid Order (${o.id})</b><br>
+    Crop: ${o.cropName} (${o.qty} ${o.unit})<br>
+    Pick up from: <b>${o.farmerName}</b> (${o.farmerPhone})<br>
+    Deliver to: <b>${o.consumerName}</b> (${o.consumerPhone})<br>
+    Address: ${o.address}<br>
+    ${o.status=="Confirmed"?`<button style="margin-top:10px;" onclick="done('${o.id}')">Mark as Delivered</button>`:`Status: <b>${o.status}</b>`}
+  </div>`;
+}
+
+async function done(id){
+  await syncDown();
+  const a=get(K.orders),o=a.find(x=>x.id==id);
+  o.status="Delivered";o.deliveredAt={txt:new Date().toLocaleString("en-IN")};
+  await set(K.orders,a);
+  alert("Delivery Confirmed!");verify();
+}
+
+syncDown();
+</script>
+</body>
+</html>
